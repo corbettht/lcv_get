@@ -1,0 +1,3 @@
+name: lcv_get
+dependencies:
+        - python=3.6
