@@ -53,8 +53,8 @@ setup(
     author_email='my_email',
     # Use the URL to the github repo.
     url='https://github.com/corbettht/lcv_get',
-    download_url=f'https://github.com/corbettht/'
-               f'lcv_get/archive/{version}.tar.gz',
+    download_url='https://github.com/corbettht/'
+               'lcv_get/archive/{version}.tar.gz',
     keywords=[
         # Add package keywords here.
     ],
