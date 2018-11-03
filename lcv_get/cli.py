@@ -33,13 +33,16 @@ def cli(ra, dec, verbose, radius):
     import numpy as np
     import psycopg2
     import os
+    import sys
  
-    if not os.path.isfile('./dbconfig.py'):
+    cwd = os.getcwd() 
+    sys.path.insert(0, cwd)
+    try:
+        from dbconfig import host, username, password
+    except ImportError:
         host = click.prompt('Host')
         username = click.prompt('Username')
         password = click.prompt('Password', hide_input=True) 
-    else:
-        from .dbconfig import host, username, password
     
     conn_string = "host='" + host + "' "\
                   "dbname='apphot_pipeline' "\
@@ -58,7 +61,8 @@ def cli(ra, dec, verbose, radius):
     c.execute(""" SELECT lcv_apassid,
                          sysremepoch,
                          sysrem,
-                         sysremerr
+                         sysremerr,
+                         sysrem_flags
                   FROM lcvs
                   WHERE  q3c_radial_query(raj2000,
                                           decj2000,
@@ -74,8 +78,9 @@ def cli(ra, dec, verbose, radius):
         mjd = dat[0]
         mag = dat[1]
         magerr = dat[2]
+        flags = dat[3]
 
-        np.savetxt('EVR_' + str(source_id) + '.csv', np.c_[mjd, mag, magerr], fmt='%5.8f')
+        np.savetxt('EVR_' + str(source_id) + '.csv', np.c_[mjd, mag, magerr, flags], fmt='%5.8f')
     
     c.close()
     conn.close()
