@@ -28,7 +28,8 @@ from .__init__ import __version__
 @click.argument('DEC', type=float)
 @click.option('--verbose', '-v', is_flag=True, default=False, help="Enable verbose output.")
 @click.option('--radius', '-r', default=(26./3600.), type=float, help="Radius for cone search") 
-def cli(ra, dec, verbose, radius): 
+@click.option('--num', '-n', default=1000, type=float, help="Max number of stars") 
+def cli(ra, dec, verbose, radius, num): 
     import psycopg2 
     import numpy as np
     import psycopg2
@@ -56,31 +57,46 @@ def cli(ra, dec, verbose, radius):
 
     query_dict = {'RA': ra,
                   'DEC': dec,
+                  'NUM': num,
                   'RADIUS': radius}
 
     c.execute(""" SELECT lcv_apassid,
                          sysremepoch,
                          sysrem,
                          sysremerr,
-                         sysrem_flags
+                         sysrem_flags,
+                         raj2000,
+                         decj2000
                   FROM lcvs
                   WHERE  q3c_radial_query(raj2000,
                                           decj2000,
                                           %(RA)s,
                                           %(DEC)s,
                                           %(RADIUS)s)
-                  ORDER BY catmag
-                  LIMIT 1""", query_dict)
-    dat = c.fetchall()[0]
+                  ORDER BY q3c_dist(raj2000,
+                                    decj2000,
+                                    %(RA)s,
+                                    %(DEC)s) ASC
+                  LIMIT %(NUM)s""", query_dict)
+    dat = c.fetchall()
+    targ = str(dat[0][0])
+    os.system('mkdir ' + targ)
+    print(len(dat))
     if len(dat) > 0: 
-        source_id = dat[0]
-        dat = np.array(dat[1:])
-        mjd = dat[0]
-        mag = dat[1]
-        magerr = dat[2]
-        flags = dat[3]
-
-        np.savetxt('EVR_' + str(source_id) + '.csv', np.c_[mjd, mag, magerr, flags], fmt='%5.8f')
+        for i,src in enumerate(dat):
+            source_id = src[0]
+            src = np.array(src[1:])
+            mjd = src[0]
+            mag = src[1]
+            magerr = src[2]
+            flags = src[3]
+            raj2000 = str(src[4])
+            decj2000 = str(src[5])
+            
+            if i ==0:
+               np.savetxt(os.path.join(targ, 'EVRTARG_' + str(source_id) + '_'+ raj2000 + '_' + decj2000 + '.csv'), np.c_[mjd, mag, magerr, flags], fmt='%5.8f')
+            else:
+                np.savetxt(os.path.join(targ, 'EVR_' + str(source_id) + '_'+ raj2000 + '_' + decj2000 + '.csv'), np.c_[mjd, mag, magerr, flags], fmt='%5.8f')
     
     c.close()
     conn.close()
