@@ -29,7 +29,8 @@ from .__init__ import __version__
 @click.option('--verbose', '-v', is_flag=True, default=False, help="Enable verbose output.")
 @click.option('--radius', '-r', default=(26./3600.), type=float, help="Radius for cone search") 
 @click.option('--num', '-n', default=1000, type=float, help="Max number of stars") 
-def cli(ra, dec, verbose, radius, num): 
+@click.option('--outname', '-o', default=None, type=str, help="Output directory name")
+def cli(ra, dec, verbose, radius, num, outname): 
     import psycopg2 
     import numpy as np
     import psycopg2
@@ -80,6 +81,8 @@ def cli(ra, dec, verbose, radius, num):
                   LIMIT %(NUM)s""", query_dict)
     dat = c.fetchall()
     targ = str(dat[0][0])
+    if outname:
+        targ = outname
     os.system('mkdir ' + targ)
     print(len(dat))
     if len(dat) > 0: 
