@@ -27,10 +27,11 @@ from .__init__ import __version__
 @click.argument('RA', type=float)
 @click.argument('DEC', type=float)
 @click.option('--verbose', '-v', is_flag=True, default=False, help="Enable verbose output.")
+@click.option('--betadb', '-b', is_flag=True, default=False, help="Access BetaDB for test fields.")
 @click.option('--radius', '-r', default=(26./3600.), type=float, help="Radius for cone search") 
 @click.option('--num', '-n', default=1000, type=float, help="Max number of stars") 
 @click.option('--outname', '-o', default=None, type=str, help="Output directory name")
-def cli(ra, dec, verbose, radius, num, outname): 
+def cli(ra, dec, verbose, betadb, radius, num, outname): 
     import psycopg2 
     import numpy as np
     import psycopg2
@@ -61,25 +62,48 @@ def cli(ra, dec, verbose, radius, num, outname):
                   'NUM': num,
                   'RADIUS': radius}
 
-    c.execute(""" SELECT lcv_apassid,
-                         sysremepoch,
-                         sysrem,
-                         sysremerr,
-                         sysrem_flags,
-                         raj2000,
-                         decj2000
-                  FROM lcvs
-                  WHERE  q3c_radial_query(raj2000,
-                                          decj2000,
-                                          %(RA)s,
-                                          %(DEC)s,
-                                          %(RADIUS)s)
-                  ORDER BY q3c_dist(raj2000,
-                                    decj2000,
-                                    %(RA)s,
-                                    %(DEC)s) ASC
-                  LIMIT %(NUM)s""", query_dict)
+    if betadb:
+        c.execute(""" SELECT lcv_apassid,
+                            sysremepoch,
+                            sysrem,
+                            sysremerr,
+                            sysrem_flags,
+                            raj2000,
+                            decj2000
+                    FROM lcvs_test
+                    WHERE  q3c_radial_query(raj2000,
+                                            decj2000,
+                                            %(RA)s,
+                                            %(DEC)s,
+                                            %(RADIUS)s)
+                    ORDER BY q3c_dist(raj2000,
+                                        decj2000,
+                                        %(RA)s,
+                                        %(DEC)s) ASC
+                    LIMIT %(NUM)s""", query_dict)
+    else: 
+        c.execute(""" SELECT lcv_apassid,
+                            sysremepoch,
+                            sysrem,
+                            sysremerr,
+                            sysrem_flags,
+                            raj2000,
+                            decj2000
+                    FROM lcvs
+                    WHERE  q3c_radial_query(raj2000,
+                                            decj2000,
+                                            %(RA)s,
+                                            %(DEC)s,
+                                            %(RADIUS)s)
+                    ORDER BY q3c_dist(raj2000,
+                                        decj2000,
+                                        %(RA)s,
+                                        %(DEC)s) ASC
+                    LIMIT %(NUM)s""", query_dict)
     dat = c.fetchall()
+    if len(dat) == 0:
+        click.echo('No matches found')
+        return False
     targ = str(dat[0][0])
     if outname:
         targ = outname
